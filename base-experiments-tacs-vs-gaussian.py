@@ -3,12 +3,18 @@
 
 ####################################################################
 #
-#
+# Experiments script to generate different parameter smoothings
 #
 ####################################################################
 
-# # Import Modules
-# In[ ]:
+
+# In[]:
+
+####################################################################
+# Import Modules
+####################################################################
+
+import os
 import json
 
 import numpy as np
@@ -23,8 +29,10 @@ import matplotlib.pyplot as plt
 
 from skimage.metrics import structural_similarity as ssim
 
+# In[]:
 
-# # Define Metrics
+####################################################################
+# Define Metrics
 # 
 # Root Mean Squared Error   
 # (Wajid, R., Mansoor, A. B., & Pedersen, M. (2014, December). A human perception based performance evaluation of image quality metrics. In International Symposium on Visual Computing (pp. 303-312). Springer, Cham.)
@@ -34,9 +42,7 @@ from skimage.metrics import structural_similarity as ssim
 #   
 # Structural Similarity Index   
 # (Wajid, R., Mansoor, A. B., & Pedersen, M. (2014, December). A human perception based performance evaluation of image quality metrics. In International Symposium on Visual Computing (pp. 303-312). Springer, Cham.)
-
-# In[ ]:
-
+####################################################################
 
 def rmse(src, dst):
     return np.sqrt(np.mean(np.square(src - dst)))
@@ -54,12 +60,12 @@ def metric(src, dst):
     
     return rms, ms, sim
 
+# In[]:
 
-# # Pooling-based time aware color smoothing
+####################################################################
+# Pooling-based time aware color smoothing
 # 
-# 
-
-# In[ ]:
+####################################################################
 
 def running_tacs(matrix, neighbors, frames, steps=2, step_at_two=False):
     work_matrix = np.copy(matrix)
@@ -91,15 +97,14 @@ def running_tacs(matrix, neighbors, frames, steps=2, step_at_two=False):
     
     return return_matrix
 
+# In[]:
 
-# # Gaussian Blur
+####################################################################
+# Gaussian Blur
 # 
 # https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter.html
 # 
-# 
-
-# In[ ]:
-
+####################################################################
 
 def running_gaussian(matrix, sigma):
     return_matrix = np.copy(matrix)
@@ -109,25 +114,28 @@ def running_gaussian(matrix, sigma):
         
     return return_matrix
 
+# In[]:
 
-# # Load Spatial Rug
-# 
+####################################################################
+# Load Spatial Rug
 #  - Load image data
 #  - Transform it to numpy array
-
-# In[]:
+####################################################################
 
 rugs_path = 'rugs/'
 results_path = 'results/'
+
+os.makedirs(results_path, exist_ok=True)
 
 im = Image.open(rugs_path + 'originalspatialrug.png')
 im2arr = np.array(im)
 arr2im = Image.fromarray(im2arr)
 
-# # TACS Configuration Variations
+# In[]:
 
-# In[ ]:
-
+####################################################################
+# TACS Configuration Variations
+####################################################################
 
 # vary neighbors 1 -> 0.5 * max_nb
 neighbor_vary = [[x, 15, 2] for x in range(1, int(im2arr.shape[0] * 0.5), 2)]
@@ -139,7 +147,11 @@ frames_vary = [[15, x, 2] for x in range(1, int(im2arr.shape[1] * 0.5), 5)]
 shape = [
     [15, 15, 15],
     [15, 15, 2],
-    [15, 15, 0]
+    [15, 15, 0],
+    
+    [17, 17, 17],
+    [17, 17, 3],
+    [17, 17, 0]
 ]
 
 tacs_config = [*neighbor_vary, *frames_vary, *shape]
@@ -158,10 +170,11 @@ for i, conf in enumerate(tacs_config):
     print('\rDone with experiment', i + 1, end=' ')
 
 
-# # Gaussian Configuration Variations
+# In[]:
 
-# In[ ]:
-
+####################################################################
+# Gaussian Configuration Variations
+####################################################################
 
 gaussian_config = [
     (1, 0),
@@ -185,54 +198,53 @@ for conf in gaussian_config:
     metric_res = metric(im2arr, im2arr_smooth)
     gaussian_results.append([im2arr_smooth, metric_res, conf])
 
+# In[]:
 
-# In[ ]:
+tacs_result_path = join(results_path, 'tacs')
+os.makedirs(tacs_result_path, exist_ok=True)
 
-plt.rcParams['figure.figsize'] = (20, 20) # (w, h)
+tacs_neighbor_result_path = join(tacs_result_path, 'neighbor')
+os.makedirs(tacs_neighbor_result_path, exist_ok=True)
 
-fig, axs = plt.subplots(len(gaussian_results), 1)
-for i, res in enumerate(gaussian_results):
-    axs[i].imshow(res[0], label=str(res[1]) + ' - ' + str(res[2]))
-    axs[i].text(10, 10, 'RMSE: ' + str(round(res[1][0], 3)) + ' - MSE: ' + str(round(res[1][1], 3)) + ' - SSIM: ' + str(round(res[1][2], 3)) + ' - Configuration ' + str(res[2]), bbox={'facecolor': 'white', 'pad': 5})
-    axs[i].set_axis_off()
+tacs_frames_result_path = join(tacs_result_path, 'frames')
+os.makedirs(tacs_frames_result_path, exist_ok=True)
 
-fig.tight_layout()
-plt.axis('off')
-plt.savefig(join(results_path, 'guassian-results.png'))
-
-# In[ ]:
-
-plt.rcParams['figure.figsize'] = (20, 50) # (w, h)
-
-fig, axs = plt.subplots(len(tacs_results), 1)
-for i, res in enumerate(tacs_results):
-    axs[i].imshow(res[0], label=str(res[1]) + ' - ' + str(res[2]))
-    axs[i].text(10, 10, 'RMSE: ' + str(round(res[1][0], 3)) + ' - MSE: ' + str(round(res[1][1], 3)) + ' - SSIM: ' + str(round(res[1][2], 3)) + ' - Configuration ' + str(res[2]), bbox={'facecolor': 'white', 'pad': 5})
-    axs[i].set_axis_off()
-
-fig.tight_layout()
-plt.axis('off')
-plt.savefig(join(results_path, 'tacs-results.png'))
-
-# In[ ]:
+tacs_shape_result_path = join(tacs_result_path, 'shape')
+os.makedirs(tacs_shape_result_path, exist_ok=True)
 
 for i, res in enumerate(tacs_results):
-    name = 'pooling-'+'-'.join([str(x) for x in res[2]])
-    Image.fromarray(res[0]).save(join(results_path, name) + '.png', 'PNG')
+    if i < len(neighbor_vary):
+        temp_results_path = tacs_neighbor_result_path
+    elif i < (len(neighbor_vary) + len(frames_vary)):
+        temp_results_path = tacs_frames_result_path
+    else:
+        temp_results_path = tacs_shape_result_path
 
-# In[ ]:
+    name = 'tacs-'+'-'.join([str(x) for x in res[2]])
+    name = join(temp_results_path, name) + '.png'
+    
+    Image.fromarray(res[0]).save(name, 'PNG')
+    tacs_results[i] = res + [name]
+
+# In[]:
+
+gaussian_result_path = join(results_path, 'gaussian')
+os.makedirs(gaussian_result_path, exist_ok=True)
 
 for i, res in enumerate(gaussian_results):
     name = 'gaussian-'+'-'.join([str(x) for x in res[2]])
-    Image.fromarray(res[0]).save(join(results_path, name) + '.png', 'PNG')
+    name = join(gaussian_result_path, name) + '.png'
+    
+    Image.fromarray(res[0]).save(name, 'PNG')
+    gaussian_results[i] = res + [name]
 
-# In[ ]:
+# In[]:
 
 results = {
     'gaussian': [x[1:] for x in gaussian_results],
     'tacs': [x[1:] for x in tacs_results],
 }
 
-with open('results.json', 'w') as f:
-    json.dump(results, f)
+with open(join(results_path, 'results.json'), 'w') as f:
+    json.dump(results, f, indent=4, sort_keys=True)
 
